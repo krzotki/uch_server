@@ -1,4 +1,4 @@
-var socket = io('http://damncraft.sytes.net:420',{transports:['websocket']});
+var socket = io();
 var USERNAME = getCookie("username");
 var SKIN = "ninja_boy";
 var ITEM_CHOSEN="empty";
