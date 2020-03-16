@@ -1,0 +1,27 @@
+var Trap =require("./Trap");
+var Square = require("./Square");
+class Floor extends Trap
+{
+	constructor(x,y,size)
+	{
+		super(x,y);
+		this.size = size;
+		this.squares = [];
+		for(var i =0;i<this.size;i++)
+		{
+			this.squares.push(new Square(this.x+GENERAL_SIZE*i,this.y));
+		}
+		
+	}
+	collision(player)
+	{
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			var result =  this.squares[i].collision(player);
+			if(result)return result;
+		}
+		return false;
+	}
+		
+}
+module.exports = Floor;

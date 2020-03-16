@@ -1,0 +1,331 @@
+class Player{
+	constructor(id,color)
+	{
+		this.x = 0;
+		this.y =0;
+		this.width =GENERAL_SIZE;
+		this.height=GENERAL_SIZE;
+		this.speedX=0;
+		this.speedY=GRAVITY;
+		this.id = id;
+		this.inAir = true;
+		this.canJump = false;
+		this.maxSpeedX =10;
+		this.maxSpeedY =15;
+		this.color = color;
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+	}
+	update()
+	{
+		if(this.inAir)this.speedY+=GRAVITY;
+		else
+		{
+			this.speedX*=0.9;
+		}
+		
+		if(this.speedY > this.maxSpeedY)this.speedY = this.maxSpeedY
+		if(this.speedY < -this.maxSpeedY)this.speedY = -this.maxSpeedY
+		
+		this.x += this.speedX;
+		this.y += this.speedY;
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+		
+		this.collision();
+	}
+	collision()
+	{
+		var didLand = false;
+		for(var i =0;i<TRAPS.length;i++)
+		{
+			var result = TRAPS[i].collision(this.id);
+			if(result)didLand = true;
+		}
+		if(!didLand)this.inAir = true;
+	}
+	jump()
+	{
+		if(this.canJump && this.speedY>-this.maxSpeedY)
+		{
+			this.y--;
+			this.speedY-=15;
+			this.canJump=false;
+			this.inAir =true;
+		}
+	}
+	move(direction)
+	{
+		if(direction=="L" && this.speedX>-this.maxSpeedX)this.speedX-=1;
+		if(direction=="R" && this.speedX<this.maxSpeedX)this.speedX+=1;
+	}
+}
+
+class Trap
+{
+	constructor(x,y,width,height)
+	{
+		this.x = x;
+		this.y = y;
+		this.rotation = 0
+		this.spinner;
+	}
+	collision(player)
+	{
+		throw new Error('You have to implement the abstract method');
+	}
+	update()
+	{
+		throw new Error('You have to implement the abstract method');
+	}
+}
+
+class Square
+{
+	constructor(x,y,color)
+	{
+		this.x = x;
+		this.y = y;
+		this.size = GENERAL_SIZE;
+		this.centerX = this.x + this.size/2;
+		this.centerY = this.y + this.size/2;
+		this.color = color;
+		this.rotation =0;
+		this.spinner;
+	}
+	collision(id)
+	{
+		var player = SOCKET_LIST[id].player;
+		this.centerX = this.x+this.size/2;
+		this.centerY = this.y+this.size/2;
+		
+		var vectorX = this.centerX- player.centerX;
+		var vectorY = this.centerY- player.centerY;
+		
+		//collision detection
+		if(vectorX*vectorX < GENERAL_SIZE*GENERAL_SIZE && vectorY*vectorY<GENERAL_SIZE*GENERAL_SIZE)
+		{
+			
+			if(vectorX*vectorX>vectorY*vectorY)
+			{
+				//col on x axis
+				if(vectorX>0)
+				{
+					//player->square
+					player.speedX = 0;
+					player.x = this.x - player.width;
+					player.canJump = true;
+				}
+				else
+				{
+					//square<-player
+					player.speedX = 0;
+					player.x = this.x + this.size;
+					player.canJump = true;
+				}
+			}
+			else 
+			{
+				//col on y axis
+				if(vectorY>0)
+				{
+					//player
+					//square
+					player.speedY=0;
+					player.y = this.y - player.height;
+					player.inAir = false;
+					player.canJump = true;
+					return true;
+				}
+				else
+				{
+					//square
+					//player
+					player.speedY=0;
+					player.y = this.y + this.size;
+				}
+			}
+			
+		}
+		return false;
+	}
+	update()
+	{
+		if(this.spinner)
+		{
+			this.rotation = this.spinner.rotation;
+			console.log(this.spinner)
+			
+			var centerX = this.spinner.x;
+			var centerY = this.spinner.y;
+			var dist =  Math.sqrt(Math.pow(centerX-this.x,2)+Math.pow(centerY - this.y,2));
+			var deltaX = -Math.cos(this.rotation)*dist;
+			var deltaY = -Math.sin(this.rotation)*dist;
+			this.x = centerX - deltaX;
+			this.y = centerY - deltaY;
+		}
+	}
+}
+
+class Floor extends Trap
+{
+	
+	constructor(x,y,size)
+	{
+		super(x,y);
+		this.size = size;
+		this.squares = [];
+		for(var i =0;i<this.size;i++)
+		{
+			this.squares.push(new Square(this.x+(GENERAL_SIZE/2)*i,this.y,"#00FF00"));
+		}
+		
+	}
+	collision(player)
+	{	
+		var didLand = false;
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			var result = this.squares[i].collision(player);
+			if(result)didLand = true;
+		}
+		return didLand;
+	}
+	update()
+	{
+		if(this.spinner)
+		{
+			for(var i=0;i<this.squares.length;i++)
+			{	
+				this.squares[i].spinner = this.spinner;
+				this.squares[i].update();
+			}
+		}
+	}	
+}
+class Spinner extends Trap
+{
+	constructor(x,y)
+	{
+		super(x,y);
+		this.squares = [];
+		this.squares.push(new Square(this.x,this.y,"#FF0000"));
+		this.rotation = 0;
+	}
+	collision(player)
+	{
+		var didLand = false;
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			this.squares[i].rotation = this.rotation;
+			var result = this.squares[i].collision(player);
+			if(result)didLand =true;
+		}
+		return didLand;
+	}
+	update()
+	{
+		if(GENERAL_TIMER>=180)
+		{
+			this.rotation+=3.14/360;
+			if(this.rotation>=360)this.rotation=0;
+		}
+	}
+}
+
+function randomColor()
+{
+	var color ="#";
+	var letters = "0123456789ABCDEF";
+	for(var i =0;i<6;i++)
+	{
+		color += letters[Math.floor(Math.random() * 16)];
+	}
+	return color;
+}
+
+var express = require('express');
+var app = express();
+var serv = require('http').Server(app);
+
+app.get('/',function(req, res) {
+	res.sendFile(__dirname + '/client/index.html');
+});
+app.use('/client',express.static(__dirname + '/client'));
+
+serv.listen(420);
+
+var SOCKET_LIST = {};
+var CANVAS = {
+	width:800,
+	height:600
+}
+var INTERVAL;
+var GAME_SPEED = 15;
+var GRAVITY = 1;
+var TRAPS = [];
+var GENERAL_SIZE =50;
+var GENERAL_TIMER = 0;
+TRAPS.push(new Floor(0,550,10));
+TRAPS.push(new Floor(0,500,1));
+
+TRAPS.push(new Spinner(200,250));
+TRAPS.push(new Floor(250,250,5));
+TRAPS[3].spinner = TRAPS[2];
+
+
+TRAPS.push(new Floor(450,200,1));
+TRAPS.push(new Floor(450,250,1));
+TRAPS.push(new Floor(450,300,1));
+TRAPS.push(new Floor(450,350,1));
+TRAPS.push(new Floor(450,400,1));
+TRAPS.push(new Floor(450,450,1));
+TRAPS.push(new Floor(450,500,1));
+
+
+
+var io = require('socket.io')(serv,{});
+io.sockets.on('connection',function(socket){
+	
+	var random = Math.random();
+	socket.player = new Player(random,randomColor());
+	SOCKET_LIST[random] = socket;
+	socket.on("disconnect",function(){
+		delete SOCKET_LIST[socket.player.id];
+	})
+	socket.on("playerJump",function(){
+		socket.player.jump();
+	})
+	socket.on("playerMove",function(direction){
+		socket.player.move(direction);
+	})
+})
+
+function update()
+{
+	GENERAL_TIMER++;
+	if(GENERAL_TIMER>=360)GENERAL_TIMER=0;
+	var pack = {
+		players:[],
+		traps:TRAPS
+	};
+	for(var g=0;g<TRAPS.length;g++)
+	{
+		TRAPS[g].update();
+	}
+	
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		socket.player.update();
+		pack.players.push(socket.player)
+	}
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		socket.emit("gameData",pack);
+	}
+} 
+INTERVAL = setInterval(update,GAME_SPEED);
+
+

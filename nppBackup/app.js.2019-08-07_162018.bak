@@ -1,0 +1,69 @@
+
+
+var express = require('express');
+var app = express();
+var serv = require('http').Server(app);
+
+app.get('/',function(req, res) {
+	res.sendFile(__dirname + '/client/index.html');
+});
+app.use('/client',express.static(__dirname + '/client'));
+
+serv.listen(420);
+
+var SOCKET_LIST = {};
+var CANVAS;
+var INTERVAL;
+var GAME_SPEED = 1000/60;
+var GRAVITY = 1;
+var io  = require('socket.io')(serv,{});
+io.sockets.on('connection',function(socket){
+	
+	var random = Math.random();
+	socket.player = new Player(random);
+	socket.on("canvasInfo",function(data){
+		CANVAS = data;
+	})
+	SOCKET_LIST[random] = socket;
+	
+	socket.on("disconnect",function(){
+		delete SOCKET_LIST[socket.player.id];
+	})
+})
+
+function update()
+{
+	var pack = [];
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		socket.player.update();
+		pack.push(socket.player)
+	}
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		socket.emit("gameData",pack);
+	}
+} 
+INTERVAL = setInterval(update,GAME_SPEED);
+class Player{
+	constructor(id)
+	{
+		this.x = 0;
+		this.y =0;
+		this.width =50;
+		this.height=50;
+		this.speedX=1;
+		this.speedY=1;
+		this.id = id;
+		this.inAir = true;
+		this.canJump = false;
+	}
+	update()
+	{
+		
+		this.x += this.speedX;
+		this.y += this.speedY;
+	}
+}

@@ -1,0 +1,3 @@
+var socket = io();
+var canvas = document.getElement
+socket.emit(

@@ -1,0 +1,54 @@
+Tape = class extends Trap
+{
+	
+	constructor(x,y,size,rotation,canBeMoved=true)
+	{
+		super(x,y);
+		this.canBeMoved=canBeMoved;
+		this.size = size;
+		this.squares = [];
+		this.initialRotation = rotation;
+
+		this.squares.push(new Square(this.x,this.y,"#00FF00","tape"));
+	
+		
+	}
+	collision(player)
+	{	
+		return super.collision(player);
+	}
+	glue()
+	{
+		for(var i in TRAPS)
+		{
+			var trap = TRAPS[i];
+			for(var g in trap.squares)
+			{
+				var square = trap.squares[g];
+				if(this.squares[0].collideWithElement(square))
+				{
+					console.log(square);
+				}
+			}
+		}
+		
+	}
+	update()
+	{
+		super.update();
+	
+	}	
+	joinSpinner(spinner)
+	{
+		super.joinSpinner(spinner);
+		
+	}
+	checkForMover()
+	{
+		super.checkForMover();
+	}
+	reset()
+	{
+		super.reset();
+	}
+}

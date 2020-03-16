@@ -1,0 +1,243 @@
+require('./server/Player')
+require('./server/Trap')
+require('./server/Square')
+require('./server/Floor')
+require('./server/Spinner')
+require('./server/Corner')
+
+function randomColor()
+{
+	var color ="#";
+	var letters = "0123456789ABCDEF";
+	for(var i =0;i<6;i++)
+	{
+		color += letters[Math.floor(Math.random() * 16)];
+	}
+	return color;
+}
+
+var express = require('express');
+var app = express();
+var serv = require('http').Server(app);
+
+app.get('/',function(req, res) {
+	res.sendFile(__dirname + '/client/index.html');
+});
+app.use('/client',express.static(__dirname + '/client'));
+
+serv.listen(420);
+
+SOCKET_LIST = {};
+CANVAS = {
+	width:1850,
+	height:800
+}
+var INTERVAL;
+var GAME_SPEED = 15;
+
+GRAVITY = 1;
+TRAPS = [];
+GENERAL_SIZE =50;
+GENERAL_TIMER = 0;
+SQARE_DENSITY = GENERAL_SIZE;
+
+PLAYERS_CONNECTED =0;
+PLAYERS_FINISHED =0;
+PLAYERS_PLACED_BLOCKS =0;
+CAN_GAME_RUN = false;
+GAME_IS_READY = false;
+GAME_STATE = "waitForTraps";
+
+function loadMap()
+{
+	TRAPS.push(new Floor(0,250,4,0));
+	TRAPS.push(new Floor(100,550,7,0));
+	TRAPS.push(new Floor(100,600,4,90));
+	TRAPS.push(new Floor(600,350,4,90));
+	checkBlockConnections();
+}
+
+loadMap();
+
+function checkBlockConnections()
+{
+	//check connections between blocks
+	for(var i in TRAPS)
+	{
+		TRAPS[i].checkForMover();
+	}
+}
+
+var io = require('socket.io')(serv,{});
+io.sockets.on('connection',function(socket){
+	PLAYERS_CONNECTED++;
+	var random = Math.random();
+	socket.player = new Player(random,randomColor());
+	SOCKET_LIST[random] = socket;
+	socket.on("disconnect",function(){
+		delete SOCKET_LIST[socket.player.id];
+		PLAYERS_CONNECTED--;
+	})
+	socket.on("playerJump",function(){
+		socket.player.jump();
+	})
+	socket.on("playerMove",function(direction){
+		socket.player.move(direction);
+	})
+		
+	//PLAYER DIED OR FINISHED LEVEL
+	socket.on("finish",function(data)
+	{
+		var result = data.result;
+		PLAYERS_FINISHED++;
+	})
+	
+	
+	//PLAYER HAS SELECTED ITEM ON 2ND CANVAS
+	socket.on("builder",function(data){
+		var name = data.name;
+		var temp;
+		if(name=="floor")
+		{
+			temp = new Floor(data.x,data.y,4,data.rotation);
+		}
+		if(name=="spinner")
+		{
+			temp = new Spinner(data.x,data.y);
+		}
+		if(name=="corner")
+		{
+			temp = new Corner(data.x,data.y,data.rotation);
+		}
+		temp.blockName = name;
+		socket.emit("drawBuilder",temp);
+	})
+
+	//PLAYER CLICKED WITH ITEM ON 1ST CANVAS
+	socket.on("placeBlock",function(data){
+		var x = data.x;
+		var y = data.y;
+		var canPlace = true;
+		var name = data.blockName;
+		
+		//DOES THE ITEM COLLIDE WITH ALREADY EXISTING ITEMS
+		for(var z in data.squares)
+		{
+			var sqx = data.squares[z].x;
+			var sqy = data.squares[z].y;
+			for(var i in TRAPS)
+			{
+				for(var g in TRAPS[i].squares)
+				{
+					if(TRAPS[i].squares[g].x == sqx && TRAPS[i].squares[g].y == sqy)canPlace=false;
+				}
+			}
+		}
+		
+		if(canPlace)
+		{
+			if(name=="floor")
+			{
+				TRAPS.push(new Floor(x,y,data.size,data.rotation));
+			}
+			if(name=="spinner")
+			{
+				TRAPS.push(new Spinner(x,y));
+			}
+			if(name=="corner")
+			{
+				TRAPS.push(new Corner(x,y,data.rotation));
+			}
+			//BLOCK PLACED
+			PLAYERS_PLACED_BLOCKS++;
+
+			
+		}
+	})
+})
+
+function update()
+{
+	if(PLAYERS_CONNECTED==0)return;
+	
+	//wait for players to place traps
+	if(!GAME_IS_READY)
+	{
+		if(PLAYERS_CONNECTED==PLAYERS_PLACED_BLOCKS)
+		{
+			GAME_IS_READY=true;
+			PLAYERS_PLACED_BLOCKS=0;
+			GENERAL_TIMER=0;
+			checkBlockConnections();
+			GAME_STATE="waitForFinish";
+		}
+	}
+	else //when all players finish or die
+	{
+		if(PLAYERS_CONNECTED==PLAYERS_FINISHED)
+		{
+			GAME_STATE = "waitForTraps"
+			GAME_IS_READY=false;
+			PLAYERS_FINISHED=0;
+			//RESET PLAYERS
+			for(var i in SOCKET_LIST)
+			{
+				SOCKET_LIST[i].player.finished = false;
+				SOCKET_LIST[i].player.x = 0;
+				SOCKET_LIST[i].player.y = 0;
+				SOCKET_LIST[i].player.speedX = 0;
+				SOCKET_LIST[i].player.speedY = 0;
+			}
+			//reset traps
+			for(var i in TRAPS)
+			{
+				if(TRAPS[i] instanceof Spinner)
+				{
+					TRAPS[i].rotation =0;
+				}
+				
+				for(var g in TRAPS[i].squares)
+				{
+					TRAPS[i].squares[g].x = TRAPS[i].squares[g].initialX; 
+					TRAPS[i].squares[g].y = TRAPS[i].squares[g].initialY; 
+				}
+				
+			}
+			GENERAL_TIMER=0;
+		}
+	}
+	
+	if(GENERAL_TIMER>=360)GENERAL_TIMER=0;
+	if(GAME_IS_READY)GENERAL_TIMER+=2;
+
+	var pack = {
+		players:[],
+		traps:TRAPS,
+		state:GAME_STATE
+	};
+	for(var g=0;g<TRAPS.length;g++)
+	{
+		if(GAME_IS_READY)
+		{
+			TRAPS[g].update();
+		}
+	}
+	
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		if(GAME_IS_READY)
+		{
+			socket.player.update();
+		}
+		pack.players.push(socket.player)
+	}
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		socket.emit("gameData",pack);
+	}
+} 
+INTERVAL = setInterval(update,GAME_SPEED);
+
+

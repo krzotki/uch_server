@@ -1,0 +1,174 @@
+class Square
+{
+	constructor(x,y)
+	{
+		this.x = x;
+		this.y = y;
+		this.size = GENERAL_SIZE;
+		this.centerX = this.x + this.size/2;
+		this.centerY = this.y + this.size/2;
+	}
+	collision(player)
+	{
+		if(player.x + player.width>this.x && player.x < this.x + this.size && player.y + player.height>this.y && player.y < this.y + this.size)
+		{
+			
+			var vectorX,vectorY;
+			vectorX = this.centerX - player.centerX;
+			vectorY = this.centerY - player.centerY;
+			var cpx,cpy;
+			if(vectorX<0)cpx=-vectorX;
+			else cpx = vectorX;
+			if(vectorY<0)cpy=-vectorY;
+			else cpy = vectorY;
+			if(cpy>cpx/2)
+			{
+				if(vectorY>0)
+				{
+					//collision from above
+					player.y = this.y - player.height;
+					player.speedY=0;
+					player.canJump = true;
+					player.inAir = false;
+				}
+				else
+				{
+					//collision from below
+					player.y = this.y + this.size;
+					player.speedY=0;
+					player.canJump = false;
+					player.inAir = true;
+				}
+			}
+			else
+			{
+				if(vectorX>0)
+				{
+					//collision from rigtdh
+					player.x = this.x -player.width;
+					player.speedX=0;
+					player.canJump = true;
+					player.inAir = true;
+				}
+				else
+				{
+					//collision from left
+					player.x = this.x + this.size;
+					player.speedX=0;
+					player.canJump = true;
+					player.inAir = true;
+				}
+			}
+			return player;
+		}
+		else return false;
+	}
+}
+
+class Floor extends Trap
+{
+	constructor(x,y,size)
+	{
+		super(x,y);
+		this.size = size;
+		this.squares = [];
+		for(var i =0;i<this.size;i++)
+		{
+			this.squares.push(new Square(this.x+GENERAL_SIZE*i,this.y));
+		}
+		
+	}
+	collision(player)
+	{
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			var result =  this.squares[i].collision(player);
+			if(result)return result;
+		}
+		return false;
+	}
+		
+}
+
+class Player{
+	constructor(id,color)
+	{
+		this.x = 0;
+		this.y =0;
+		this.width =GENERAL_SIZE;
+		this.height=GENERAL_SIZE;
+		this.speedX=0;
+		this.speedY=GRAVITY;
+		this.id = id;
+		this.inAir = true;
+		this.canJump = false;
+		this.maxSpeedX =10;
+		this.maxSpeedY =10;
+		this.color = color;
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+	}
+	update()
+	{
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+		if(this.inAir)this.speedY+=GRAVITY;
+		else
+		{
+			if(this.speedX>0)this.speedX--;
+			if(this.speedX<0)this.speedX++;
+		}
+		//this.collision();
+		this.x += this.speedX;
+		this.y += this.speedY;
+		this.collision();
+	}
+	collision()
+	{
+		this.inAir = true;
+		for(var i=0;i<TRAPS.length;i++)
+		{
+			var result = TRAPS[i].collision(this);
+			if(result)
+			{
+				this.x = result.x;
+				this.y = result.y;
+				this.canJump = result.canJump;
+				this.inAir = result.inAir;
+				this.speedX = result.speedX;
+				this.speedY = result.speedY;
+			}
+			
+		}
+	}
+	jump()
+	{
+		if(this.canJump && this.speedY>-this.maxSpeedY)
+		{
+			this.inAir = true;
+			this.y--;
+			this.speedY-=15;
+			this.canJump=false;
+		}
+	}
+	move(direction)
+	{
+		if(direction=="L" && this.speedX>-this.maxSpeedX)this.speedX-=1;
+		if(direction=="R" && this.speedX<this.maxSpeedX)this.speedX+=1;
+	}
+}
+
+
+
+class Trap
+{
+	constructor(x,y,width,height)
+	{
+		this.x = x;
+		this.y = y;
+	}
+	collision(player)
+	{
+		throw new Error('You have to implement the abstract method');
+	}
+}

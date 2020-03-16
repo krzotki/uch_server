@@ -1,0 +1,246 @@
+var socket = io();
+
+var ITEM_CHOSEN="empty";
+var ITEM_ROTATION = 0;
+var ITEM_X=0;
+var ITEM_Y=0;
+var GENERAL_SIZE=50;
+var GAME_STATE = "";
+var CURRENT_CANVAS;
+var PLAYERS_CONNECTED =0;
+var ITEM_MAP = {};
+var canvas = document.getElementById("gameArea");
+var itemCanvas = document.getElementById("itemShop");
+var mainContext = canvas.getContext("2d");
+var TEMP_BLOCK;
+var pressedKeys={
+	w:false,
+	a:false,
+	s:false
+}
+
+const WOOD_BLOCK = new Image(50, 50);
+WOOD_BLOCK.src = './client/wood.png';
+const METAL_BLOCK = new Image(50, 50);
+METAL_BLOCK.src = './client/metal.png';
+
+function placeItemOnMap(x,y,width,height,item)
+{
+	//assign specific item to coords
+	var x1 = x;
+	var x2 = x+width;
+	var y1 = y;
+	var y2 = y +height;
+	for(var i =x1;i<x2;i+=GENERAL_SIZE)
+	{
+		for(var g=y1;g<y2;g+=GENERAL_SIZE)
+		{
+			ITEM_MAP[g][i]=item;
+		}
+	}
+	
+}
+
+
+function initializeMapItem()
+{
+	//assign EMPTY to every field
+	for(var i =0;i<itemCanvas.height;i+=GENERAL_SIZE)
+	{
+		var row = {};
+		for(var g =0;g<itemCanvas.width;g+=GENERAL_SIZE)
+		{
+			row[g] = "empty";
+		}
+		ITEM_MAP[i] = row;
+	}
+}
+
+function initializeThings()
+{
+	initializeMapItem();
+	
+	//item shop drawings and assigning coords to items
+	placeItemOnMap(50,50,200,50,"floor");
+	placeItemOnMap(300,50,50,50,"spinner");
+	placeItemOnMap(400,50,200,50,"corner");
+	placeItemOnMap(550,50,50,200,"corner");
+	
+	//draw the item shop just once
+	drawTheMap();
+}
+initializeThings();
+
+function drawSingleBlock(context,name,x,y)
+{
+	if(name=="empty")return;
+	if(name=="floor")
+	{
+		context.drawImage(WOOD_BLOCK,x,y);
+	}
+	if(name=="spinner")
+	{
+		context.fillStyle="#FF0000";
+		context.fillRect(x,y,GENERAL_SIZE,GENERAL_SIZE);
+	}	
+	if(name=="corner")
+	{
+		context.drawImage(METAL_BLOCK,x,y);
+	}
+}
+
+
+function drawTheMap()
+{
+	//for now just rectangles, later graphics, although coords assignation must remain the same
+	var ctx = itemCanvas.getContext("2d");
+	for(var y =0;y<itemCanvas.height;y+=GENERAL_SIZE)
+	{
+		for(var x =0;x<itemCanvas.width;x+=GENERAL_SIZE)
+		{
+			var item = ITEM_MAP[y][x];
+			drawSingleBlock(ctx,item,x,y);
+			
+		}
+	}
+}
+
+function refreshHUD()
+{
+	document.getElementById("gameState").innerHTML = GAME_STATE;
+	document.getElementById("playerCount").innerHTML = "Players: "+ PLAYERS_CONNECTED;
+	
+}
+
+
+socket.on("gameData",function(data){
+	mainContext.clearRect(0,0,canvas.width,canvas.height);
+	
+	//graphics do not load
+	drawTheMap();
+	
+	GAME_STATE = data.state;
+	PLAYERS_CONNECTED = data.players.length;
+	
+	//display game status
+	refreshHUD();
+		
+	if(GAME_STATE=="waitForTraps")itemCanvas.style.display = "initial";
+	else itemCanvas.style.display = "none";
+	
+	
+	if(pressedKeys.a)socket.emit("playerMove","L");
+	if(pressedKeys.d)socket.emit("playerMove","R");
+	if(pressedKeys.w)socket.emit("playerJump");
+	
+	//DRAW THE PLAYERS
+	for(var i =0;i<data.players.length;i++)
+	{
+		mainContext.fillStyle=data.players[i].color;
+		mainContext.fillRect(data.players[i].x,data.players[i].y,data.players[i].width,data.players[i].height);
+	}
+	//DRAW EVERY TRAP SQUARE
+	for(var g =0;g<data.traps.length;g++)
+	{
+		
+		for(var z=0;z<data.traps[g].squares.length;z++)
+		{
+			var square = data.traps[g].squares[z];
+			drawSingleBlock(mainContext,square.name,square.x,square.y);
+		}
+	}
+	
+	//DRAW TEMPORARY ITEM PLACE
+	if(TEMP_BLOCK!=undefined && ITEM_CHOSEN!="empty")
+	{
+		for(var i in TEMP_BLOCK.squares)
+		{
+			mainContext.fillStyle = TEMP_BLOCK.squares[i].color;
+			var square = TEMP_BLOCK.squares[i];
+			drawSingleBlock(mainContext,square.name,square.x,square.y);
+		}
+	}
+	
+	//GET THE ITEM"S POSITION FROM SERVER (easier that way)
+	if(ITEM_CHOSEN!="empty")
+	{
+		ITEM_PLACING_DATA = {
+			x:ITEM_X,
+			y:ITEM_Y,
+			rotation:ITEM_ROTATION,
+			name:ITEM_CHOSEN
+		}
+		socket.emit("builder",ITEM_PLACING_DATA);
+	}
+})
+
+//JUST RESPONSE FROM THIS GUY ABOVE ^^
+socket.on("drawBuilder",function(data){
+	TEMP_BLOCK = data;
+})
+
+
+onmousemove = function(event)
+{
+	ITEM_X = event.layerX- event.layerX%GENERAL_SIZE;
+	ITEM_Y = event.layerY- event.layerY%GENERAL_SIZE;
+	CURRENT_CANVAS = event.path[0].id;
+}
+
+onmousedown = function(event)
+{
+	if(CURRENT_CANVAS=="itemShop")
+	{
+		if(GAME_STATE!="waitForTraps")return;
+		ITEM_CHOSEN = ITEM_MAP[ITEM_Y][ITEM_X];
+		if(ITEM_CHOSEN=="empty") TEMP_BLOCK = undefined;
+	}
+	if(CURRENT_CANVAS=="gameArea")
+	{
+		if(ITEM_CHOSEN!="empty")
+		{
+			TEMP_BLOCK.rotation = ITEM_ROTATION;
+			socket.emit("placeBlock",TEMP_BLOCK);
+			TEMP_BLOCK=undefined;
+			ITEM_CHOSEN="empty";
+		}
+	}
+}
+
+onkeypress = function(event)
+{
+	var key = event.key.toLowerCase();
+	if(key=="r")
+	{
+		ITEM_ROTATION+=90;
+		if(ITEM_ROTATION==360)ITEM_ROTATION=0;
+	}
+	if(key=="w")
+	{
+		pressedKeys.w = true;
+	}
+	if(key=="a")
+	{
+		pressedKeys.a = true;
+	}
+	if(key=="d")
+	{
+		pressedKeys.d = true;
+	}
+}
+onkeyup = function(event)
+{
+	var key = event.key.toLowerCase();
+	if(key=="a")
+	{
+		pressedKeys.a = false;
+	}
+	if(key=="d")
+	{
+		pressedKeys.d = false;
+	}
+	if(key=="w")
+	{
+		pressedKeys.w = false;
+	}
+}

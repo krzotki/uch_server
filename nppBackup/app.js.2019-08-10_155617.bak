@@ -1,0 +1,301 @@
+class Player{
+	constructor(id,color)
+	{
+		this.x = 0;
+		this.y =0;
+		this.width =GENERAL_SIZE;
+		this.height=GENERAL_SIZE;
+		this.speedX=0;
+		this.speedY=GRAVITY;
+		this.id = id;
+		this.inAir = true;
+		this.canJump = false;
+		this.maxSpeedX =10;
+		this.maxSpeedY =10;
+		this.color = color;
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+	}
+	update()
+	{
+		console.log(this.inAir)
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+		if(this.inAir)this.speedY+=GRAVITY;
+		else
+		{
+			if(this.speedX>0)this.speedX--;
+			if(this.speedX<0)this.speedX++;
+		}
+		//this.collision();
+		this.x += this.speedX;
+		this.y += this.speedY;
+		this.collision();
+	}
+	collision()
+	{
+		for(var i=0;i<TRAPS.length;i++)
+		{
+			var result = TRAPS[i].collision(this);
+			if(result)
+			{
+				this.x = result.x;
+				this.y = result.y;
+				this.canJump = result.canJump;
+				this.inAir = result.inAir;
+				this.speedX = result.speedX;
+				this.speedY = result.speedY;
+			}
+			
+		}
+	}
+	jump()
+	{
+		if(this.canJump && this.speedY>-this.maxSpeedY)
+		{
+			this.inAir = true;
+			this.y--;
+			this.speedY-=15;
+			this.canJump=false;
+		}
+	}
+	move(direction)
+	{
+		if(direction=="L" && this.speedX>-this.maxSpeedX)this.speedX-=1;
+		if(direction=="R" && this.speedX<this.maxSpeedX)this.speedX+=1;
+	}
+}
+
+class Trap
+{
+	constructor(x,y,width,height)
+	{
+		this.x = x;
+		this.y = y;
+		this.rotation = 0
+		this.spinner;
+	}
+	collision(player)
+	{
+		throw new Error('You have to implement the abstract method');
+	}
+}
+
+class Square
+{
+	constructor(x,y,color)
+	{
+		this.x = x;
+		this.y = y;
+		this.size = GENERAL_SIZE;
+		this.centerX = this.x + this.size/2;
+		this.centerY = this.y + this.size/2;
+		this.color = color;
+		this.rotation =0;
+		this.spinner;
+	}
+	collision(player)
+	{
+		this.centerX = this.x + this.size/2;
+		this.centerY = this.y + this.size/2;
+		
+		if(player.x + player.width>this.x && player.x < this.x + this.size && player.y + player.height>this.y && player.y < this.y + this.size)
+		{
+
+			
+			var vectorX,vectorY;
+			vectorX = this.centerX - player.centerX;
+			vectorY = this.centerY - player.centerY;
+
+			var cpx,cpy;
+			if(vectorX<0)cpx=-vectorX;
+			else cpx = vectorX;
+			if(vectorY<0)cpy=-vectorY;
+			else cpy = vectorY;
+			if(cpy>cpx)
+			{
+				if(vectorY>0)
+				{	
+					//collision from above
+					player.y = this.y - player.height;
+					player.speedY=0;
+					player.canJump = true;
+					player.inAir = false;
+				}
+				else
+				{
+
+					//collision from below
+					player.y = this.y + this.size;
+					player.speedY=0;
+					player.canJump = false;
+					player.inAir = true;
+				}
+			}
+			else if(cpx > cpy)
+			{
+				if(vectorX>0)
+				{
+					//collision from rigtdh
+					player.x = this.x -player.width;
+					player.speedX=0;
+					player.canJump = true;
+					player.inAir = true;
+				}
+				else
+				{
+					//collision from left
+					player.x = this.x + this.size;
+					player.speedX=0;
+					player.canJump = true;
+					player.inAir = true;
+				}
+			}
+			else return false;
+			return player;
+		}
+		else return false;
+	}
+}
+
+class Floor extends Trap
+{
+	
+	constructor(x,y,size)
+	{
+		super(x,y);
+		this.size = size;
+		this.squares = [];
+		for(var i =0;i<this.size;i++)
+		{
+			this.squares.push(new Square(this.x+(GENERAL_SIZE+5)*i,this.y,"#00FF00"));
+		}
+		
+	}
+	collision(player)
+	{	
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			this.squares[i].rotation = this.rotation;
+			var result =  this.squares[i].collision(player);
+			if(result)return result;
+		}
+		return false;
+	}
+		
+}
+class Spinner extends Trap
+{
+	constructor(x,y)
+	{
+		super(x,y);
+		this.squares = [];
+		this.squares.push(new Square(this.x,this.y,"#FF0000"));
+	}
+	collision(player)
+	{
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			this.squares[i].rotation = this.rotation;
+			var result =  this.squares[i].collision(player);
+			if(result)return result;
+		}
+		return false;
+	}
+}
+
+function randomColor()
+{
+	var color ="#";
+	var letters = "0123456789ABCDEF";
+	for(var i =0;i<6;i++)
+	{
+		color += letters[Math.floor(Math.random() * 16)];
+	}
+	return color;
+}
+
+var express = require('express');
+var app = express();
+var serv = require('http').Server(app);
+
+app.get('/',function(req, res) {
+	res.sendFile(__dirname + '/client/index.html');
+});
+app.use('/client',express.static(__dirname + '/client'));
+
+serv.listen(420);
+
+var SOCKET_LIST = {};
+var CANVAS = {
+	width:800,
+	height:600
+}
+var INTERVAL;
+var GAME_SPEED = 1000/60;
+var GRAVITY = 1;
+var TRAPS = [];
+var GENERAL_SIZE =50;
+
+TRAPS.push(new Floor(0,550,10));
+TRAPS.push(new Floor(0,500,1));
+
+TRAPS.push(new Spinner(200,450));
+TRAPS.push(new Floor(150,450,1));
+
+var spinner = TRAPS[2];
+var orbit = TRAPS[3];
+orbit.spinner = spinner;
+function spin()
+{
+	spinner.rotation+=0.1;
+	orbit.rotation = spinner.rotation;
+	var dist = 50;
+	var centerX = 200;
+	var centerY = 450;
+	var deltaX = Math.cos(orbit.rotation)*dist;
+	var deltaY = Math.sin(orbit.rotation)*dist;
+	orbit.squares[0].x = centerX - deltaX;
+	orbit.squares[0].y = centerY - deltaY;
+}
+
+var io = require('socket.io')(serv,{});
+io.sockets.on('connection',function(socket){
+	
+	var random = Math.random();
+	socket.player = new Player(random,randomColor());
+	SOCKET_LIST[random] = socket;
+	socket.on("disconnect",function(){
+		delete SOCKET_LIST[socket.player.id];
+	})
+	socket.on("playerJump",function(){
+		socket.player.jump();
+	})
+	socket.on("playerMove",function(direction){
+		socket.player.move(direction);
+	})
+})
+
+function update()
+{
+	spin();
+	
+	var pack = {
+		players:[],
+		traps:TRAPS
+	};
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		socket.player.update();
+		pack.players.push(socket.player)
+	}
+	for(var i in SOCKET_LIST)
+	{
+		var socket = SOCKET_LIST[i];
+		socket.emit("gameData",pack);
+	}
+} 
+INTERVAL = setInterval(update,GAME_SPEED);
+
+

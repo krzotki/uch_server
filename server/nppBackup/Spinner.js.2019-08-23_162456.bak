@@ -1,0 +1,40 @@
+Spinner = class extends Trap
+{
+	constructor(x,y)
+	{
+		super(x,y);
+		this.squares = [];
+		this.squares.push(new Square(this.x,this.y,"#FF0000"));
+		this.rotation = 0;
+		this.centerX = this.x + GENERAL_SIZE/2;
+		this.centerY = this.y + GENERAL_SIZE/2;
+		this.initialX = this.x;
+		this.initialY = this.y;
+	}
+	collision(player)
+	{
+		var didLand = false;
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			var result = this.squares[i].collision(player);
+			if(result)didLand =true;
+		}
+		return didLand;
+	}
+	update()
+	{
+		if(GENERAL_TIMER<=90)
+		{
+			this.rotation+=(Math.PI/360)*2;
+		}
+		if(Math.round(this.rotation * 100) / 100==Math.round(2*Math.PI * 100) / 100)this.rotation=0;
+
+		this.centerX = this.x + GENERAL_SIZE/2;
+		this.centerY = this.y + GENERAL_SIZE/2;
+
+	}
+	checkForMover()
+	{
+		//this element cannot have a mover
+	}
+}

@@ -1,0 +1,10 @@
+var socket = io();
+var canvas = document.getElementById("gameArea");
+var canvasInfo = {
+	width:canvas.width,
+	height:canvas.height
+};
+socket.emit("canvasInfo",canvasInfo);
+socket.on("gameData",function(data){
+	
+})

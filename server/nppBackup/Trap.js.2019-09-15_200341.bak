@@ -1,0 +1,104 @@
+Trap = class
+{
+	constructor(x,y,width,height,rotation,canBeMoved=true)
+	{
+		this.x = x;
+		this.y = y;
+		this.rotation = 0;
+		this.spinner=0;
+		this.canBeMoved=canBeMoved;
+	}
+	collision(player,parent)
+	{
+		var didLand = false;
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			var result = this.squares[i].collision(player,parent);
+			if(result)didLand = true;
+		}
+		return didLand;
+	}
+	update()
+	{
+		for(var i in this.squares)
+		{
+			this.squares[i].update();
+		}
+	}
+	checkForMover()
+	{
+		var foundSpinner = false;
+		if(!this.canBeMoved)return;
+		for(var i in TRAPS)
+		{
+				
+			for(var g in this.squares)
+			{
+				
+				for(var z in TRAPS[i].squares)
+				{
+					if(this.squares[g].collideWithElement(TRAPS[i].squares[z]))
+					{
+						if(TRAPS[i] instanceof Spinner)
+						{
+							
+							if(this.squares[0].spinner)continue;
+							foundSpinner=true;
+							this.joinSpinner(TRAPS[i]);
+						}
+						
+					}
+				}
+				
+			}
+				
+		}
+		console.log(this.spinner)
+		if(!foundSpinner)this.unjoinSpinner();
+	}
+	joinSpinner(spinner)
+	{
+		if(this.y>spinner.y)
+		{
+			this.squares[0].angleDelta = Math.PI/2;
+		}
+		if(this.x > spinner.x)
+		{
+			this.squares[0].angleDelta = 0;
+		}
+		if(this.y < spinner.y)
+		{
+			this.squares[0].angleDelta = -Math.PI/2;
+		}
+		if(this.x < spinner.x)
+		{
+			this.squares[0].angleDelta = Math.PI;
+		}
+		for(var i=0;i<this.squares.length;i++)
+		{
+			this.squares[i].spinner = spinner;
+			
+			var deltaX = this.squares[i].x - this.squares[i].spinner.x;
+			var deltaY = this.squares[i].y - this.squares[i].spinner.y;
+			this.squares[i].initialDistanceFromSpinner = Math.sqrt(Math.pow(deltaX,2)+Math.pow(deltaY,2));
+			this.squares[i].angleDelta = Math.atan2(deltaY,deltaX);
+		}
+	}
+	unjoinSpinner()
+	{
+		this.spinner=0;
+		for(var i=0;i<this.squares.length;i++)
+		{
+			this.squares[i].spinner = 0;
+		}
+	}
+	reset()
+	{
+		for(var g in this.squares)
+		{
+			this.squares[g].x = this.squares[g].initialX; 
+			this.squares[g].y = this.squares[g].initialY; 
+			this.squares[g].angle = this.squares[g].initialAngle;
+		}
+	}
+}

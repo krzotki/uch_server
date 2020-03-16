@@ -1,0 +1,29 @@
+Trap = class
+{
+	constructor(x,y,width,height,rotation)
+	{
+		this.x = x;
+		this.y = y;
+		this.rotation = 0;
+		this.spinner=0;
+
+	}
+	collision(player)
+	{
+		var didLand = false;
+		for(var i=0;i<this.squares.length;i++)
+		{	
+			var result = this.squares[i].collision(player);
+			if(result)didLand = true;
+		}
+		return didLand;
+	}
+	update()
+	{
+		throw new Error('You have to implement the abstract method');
+	}
+	checkForMover()
+	{
+		throw new Error('You have to implement the abstract method');
+	}
+}

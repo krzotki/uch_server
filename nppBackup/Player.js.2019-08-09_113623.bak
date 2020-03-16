@@ -1,0 +1,69 @@
+class Player{
+	constructor(id,color)
+	{
+		this.x = 0;
+		this.y =0;
+		this.width =GENERAL_SIZE;
+		this.height=GENERAL_SIZE;
+		this.speedX=0;
+		this.speedY=GRAVITY;
+		this.id = id;
+		this.inAir = true;
+		this.canJump = false;
+		this.maxSpeedX =10;
+		this.maxSpeedY =10;
+		this.color = color;
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+	}
+	update()
+	{
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+		if(this.inAir)this.speedY+=GRAVITY;
+		else
+		{
+			if(this.speedX>0)this.speedX--;
+			if(this.speedX<0)this.speedX++;
+		}
+		//this.collision();
+		this.x += this.speedX;
+		this.y += this.speedY;
+		this.collision();
+	}
+	collision()
+	{
+		this.inAir = true;
+		for(var i=0;i<TRAPS.length;i++)
+		{
+			var result = TRAPS[i].collision(this);
+			if(result)
+			{
+				this.x = result.x;
+				this.y = result.y;
+				this.canJump = result.canJump;
+				this.inAir = result.inAir;
+				this.speedX = result.speedX;
+				this.speedY = result.speedY;
+			}
+			
+		}
+	}
+	jump()
+	{
+		if(this.canJump && this.speedY>-this.maxSpeedY)
+		{
+			this.inAir = true;
+			this.y--;
+			this.speedY-=15;
+			this.canJump=false;
+		}
+	}
+	move(direction)
+	{
+		if(direction=="L" && this.speedX>-this.maxSpeedX)this.speedX-=1;
+		if(direction=="R" && this.speedX<this.maxSpeedX)this.speedX+=1;
+	}
+}
+
+module.exports = Player

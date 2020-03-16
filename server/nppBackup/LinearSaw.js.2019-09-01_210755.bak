@@ -1,0 +1,84 @@
+LinearSaw = class extends Trap
+{
+	
+	constructor(x,y,size,rotation,canBeMoved=true)
+	{
+		super(x,y);
+		this.canBeMoved=canBeMoved;
+		this.size = 5;
+		this.squares = [];
+		this.initialRotation = rotation;
+		this.bladeRoute=100;
+		this.bladeDirection =1;
+		if(rotation==0)
+		{
+			this.squares.push(new Square(this.x,this.y-GENERAL_SIZE/2,"#00FF00","saw_blade",0));
+			for(var i =0;i<this.size;i++)
+			{
+				this.squares.push(new Square(this.x+(SQARE_DENSITY)*i,this.y,"#00FF00","saw_table"));
+			}
+			
+		}
+		else if(rotation==90)
+		{
+			this.squares.push(new Square(this.x+GENERAL_SIZE/2,this.y,"#00FF00","saw_blade",Math.PI/2));
+			for(var i =0;i<this.size;i++)
+			{
+				this.squares.push(new Square(this.x,this.y+(SQARE_DENSITY)*i,"#00FF00","saw_table"));
+			}
+			
+		}
+		else if(rotation==180)
+		{
+			this.squares.push(new Square(this.x,this.y+GENERAL_SIZE/2,"#00FF00","saw_blade",Math.PI));
+			for(var i =0;i<this.size;i++)
+			{
+				this.squares.push(new Square(this.x-(SQARE_DENSITY)*i,this.y,"#00FF00","saw_table"));
+			}
+			
+		}
+		else if(rotation==270)
+		{
+			this.squares.push(new Square(this.x-GENERAL_SIZE/2,this.y,"#00FF00","saw_blade",Math.PI*3/2));
+			for(var i =0;i<this.size;i++)
+			{
+				this.squares.push(new Square(this.x,this.y-(SQARE_DENSITY)*i,"#00FF00","saw_table"));
+			}
+			
+		}
+		this.blade = this.squares[0];
+	}
+	collision(player)
+	{	
+		return super.collision(player);
+	}
+	update()
+	{
+		super.update();
+		this.bladeRoute +=this.bladeDirection;
+		if(this.bladeRoute>=200)this.bladeDirection=-1;
+		if(this.bladeRoute<=1)this.bladeDirection=1;
+		
+		var deltaY = (GENERAL_SIZE/2) * Math.cos(this.blade.rotation);
+		var deltaX = (GENERAL_SIZE/2) * Math.sin(this.blade.rotation);
+		
+		this.blade.initialX = this.squares[1].x;
+		this.blade.initialY = this.squares[1].y;
+		
+		this.blade.x = this.blade.initialX +deltaX+ Math.cos(this.blade.rotation)*this.bladeRoute;
+		this.blade.y = this.blade.initialY -deltaY+ Math.sin(this.blade.rotation)*this.bladeRoute;
+	}	
+	joinSpinner(spinner)
+	{
+		super.joinSpinner(spinner);
+		
+	}
+	checkForMover()
+	{
+		super.checkForMover();
+	}
+	reset()
+	{
+		super.reset();
+	}
+}

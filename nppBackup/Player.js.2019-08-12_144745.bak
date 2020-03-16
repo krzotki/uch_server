@@ -1,0 +1,64 @@
+var GENERAL_SIZE,GRAVITY,TRAPS;
+require('./app')
+Player = class {
+	constructor(id,color)
+	{
+		this.x = 0;
+		this.y =0;
+		this.width =GENERAL_SIZE;
+		this.height=GENERAL_SIZE;
+		this.speedX=0;
+		this.speedY=GRAVITY;
+		this.id = id;
+		this.inAir = true;
+		this.canJump = false;
+		this.maxSpeedX =10;
+		this.maxSpeedY =15;
+		this.color = color;
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+	}
+	update()
+	{
+		if(this.inAir)this.speedY+=GRAVITY;
+		else
+		{
+			this.speedX*=0.75;
+		}
+		
+		if(this.speedY > this.maxSpeedY)this.speedY = this.maxSpeedY
+		if(this.speedY < -this.maxSpeedY)this.speedY = -this.maxSpeedY
+		
+		this.x += this.speedX;
+		this.y += this.speedY;
+		this.centerX = this.x + this.width/2;
+		this.centerY = this.y + this.height/2;
+		
+		this.collision();
+	}
+	collision(TRAPS)
+	{
+		var didLand = false;
+		for(var i =0;i<TRAPS.length;i++)
+		{
+			var result = TRAPS[i].collision(this.id);
+			if(result)didLand = true;
+		}
+		if(!didLand)this.inAir = true;
+	}
+	jump()
+	{
+		if(this.canJump && this.speedY>-this.maxSpeedY)
+		{
+			this.y--;
+			this.speedY-=15;
+			this.canJump=false;
+			this.inAir =true;
+		}
+	}
+	move(direction)
+	{
+		if(direction=="L" && this.speedX>-this.maxSpeedX)this.speedX-=2;
+		if(direction=="R" && this.speedX<this.maxSpeedX)this.speedX+=2;
+	}
+}

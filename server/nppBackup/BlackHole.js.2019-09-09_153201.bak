@@ -1,0 +1,67 @@
+BlackHole = class extends Trap
+{
+	
+	constructor(x,y,size,rotation,canBeMoved=true)
+	{
+		super(x,y);
+		this.canBeMoved=canBeMoved;
+		this.size = size;
+		this.squares = [];
+		this.initialRotation = rotation;
+		
+		this.squares.push(new Square(this.x,this.y,"#00FF00","blackhole"));
+		
+		
+	}
+	collision(player)
+	{	
+		return super.collision(player);
+	}
+	update()
+	{
+		super.update();
+		
+		for(var i in SOCKET_LIST)
+		{
+			
+			var player = SOCKET_LIST[i].player;
+			var hole = this.squares[0];
+			var distance = Math.sqrt(Math.pow(player.centerX-hole.centerX,2)+Math.pow(player.centerY-hole.centerY,2));
+			if(distance<200)
+			{
+				player.speedX+=(hole.centerX-player.centerX)/200;
+				player.speedY+=(hole.centerY-player.centerY)/200;
+			}
+		}
+		
+		for(var i in TRAPS)
+		{
+			if(TRAPS[i] instanceof Arrow)
+			{
+				var arrow = TRAPS[i].squares[0];
+				var hole = this.squares[0];
+				var distance = Math.sqrt(Math.pow(arrow.centerX-hole.centerX,2)+Math.pow(arrow.centerY-hole.centerY,2));
+				if(distance<200)
+				{
+					console.log("aaaa")
+					arrow.speedX+=(hole.centerX-arrow.centerX);
+					arrow.speedY+=(hole.centerY-arrow.centerY);
+				}
+			}
+		}
+		
+	}	
+	joinSpinner(spinner)
+	{
+		super.joinSpinner(spinner);
+		
+	}
+	checkForMover()
+	{
+		super.checkForMover();
+	}
+	reset()
+	{
+		super.reset();
+	}
+}

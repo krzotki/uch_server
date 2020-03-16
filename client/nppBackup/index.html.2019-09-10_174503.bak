@@ -1,0 +1,48 @@
+<!DOCTYPE HTML>
+
+<html>
+	<head>
+		<meta charset="utf-8"/>
+		<title>Template</title>
+		<link rel="stylesheet" href="style.css"/>
+		<style> 
+			#gameArea
+			{
+				border:solid black 1px;
+			}
+			#itemShop
+			{
+				border:solid black 1px;
+				margin:50px;
+				left:8px;
+			}
+			#playerCount
+			{
+			
+			}
+			.hudElem
+			{
+				float:left;
+				margin-right:50px;
+				font-size:20px;
+			}
+			
+		</style>
+		<script src="./client/cookie.js"></script>
+		<script src="https://cdn.socket.io/socket.io-1.4.5.js"></script>
+		
+	</head>
+	
+	<body>
+		<p id="gameState" class="hudElem">Status</p>
+		<p id="playerCount" class="hudElem">Players</p>
+		<p id="scoreBoard" class="hudElem"></p>
+		<canvas id="gameArea" width=1850 height=800></canvas>
+		<canvas id="itemShop" width=800 height=300></canvas>
+		<script>checkCookie()</script>
+		
+		<script src="./client/sketch.js"></script>
+		
+		
+	</body>
+</html>

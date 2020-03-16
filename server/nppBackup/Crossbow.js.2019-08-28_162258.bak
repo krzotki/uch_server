@@ -1,0 +1,32 @@
+Crossbow = class extends Trap
+{
+	
+	constructor(x,y,size,rotation,canBeMoved=true)
+	{
+		super(x,y);
+		this.canBeMoved=canBeMoved;
+		this.size = 1;
+		this.squares = [];
+		this.initialRotation = rotation;
+		this.squares.push(new Square(this.x+(SQARE_DENSITY)*i,this.y,"#00FF00","crossbow"));
+			
+	}
+	collision(player)
+	{	
+		return super.collision(player);
+	}
+	update()
+	{
+		super.update();
+	
+	}	
+	joinSpinner(spinner)
+	{
+		super.joinSpinner(spinner);
+		
+	}
+	checkForMover()
+	{
+		super.checkForMover();
+	}
+}
