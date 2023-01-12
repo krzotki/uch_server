@@ -1,4 +1,4 @@
-var socket = io('https://rzotki-mpgame.herokuapp.com', {transports: ['websocket']});
+var socket = io('https://multiplayer-game-uch.herokuapp.com/', {transports: ['websocket']});
 var USERNAME = getCookie("username");
 var SKIN = "ninja_boy";
 var ITEM_CHOSEN="empty";
